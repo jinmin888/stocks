@@ -95,3 +95,12 @@ def test_min_rsi_diff_and_score_weights():
     assert screen(df, ScreenConfig(divergence=DivergenceConfig(min_rsi_diff=25))) == []
     d = screen(df, ScreenConfig())[0].divergences[0]
     assert abs(d.score - (d.rsi_diff + 0.2 * d.price_change_pct)) < 1e-9
+
+
+def test_detect_all_includes_history():
+    from screener.screen import analyze
+
+    df = regular_bottom_df()
+    a = analyze(df, ScreenConfig())
+    assert any(d.kind == "regular" and d.side == "bottom" for d in a["divergences"])
+    assert len(a["rsi"]) == len(df)

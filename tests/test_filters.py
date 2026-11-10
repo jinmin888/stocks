@@ -1,6 +1,6 @@
 import pandas as pd
 
-from screener.cli import display_time
+from screener.runner import display_time
 from screener.config import FilterConfig
 from screener.data.base import Instrument
 from screener.filters import apply

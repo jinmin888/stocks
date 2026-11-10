@@ -74,3 +74,11 @@ def screen(df: pd.DataFrame, cfg: ScreenConfig) -> List[Signal]:
             divergences=sorted(d_hit, key=lambda d: d.score, reverse=True),
         ))
     return out
+
+
+def analyze(df: pd.DataFrame, cfg: ScreenConfig) -> dict:
+    """画图用：K 线、RSI、全部有效分型、历史背离。时间以 K 线起始时刻的索引位置引用。"""
+    fractals = fr_mod.detect(df, cfg.fractal) if len(df) >= 3 else []
+    rsi = rsi_fn(df["close"], cfg.divergence.rsi_period)
+    divs = div_mod.detect_all(fractals, rsi, cfg.divergence)
+    return {"fractals": fractals, "rsi": rsi, "divergences": divs}

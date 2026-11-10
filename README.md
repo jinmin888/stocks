@@ -10,7 +10,7 @@
 - [x] 数据源：加密货币（ccxt）、A 股（akshare）、美股/港股（yfinance），本地 Parquet 缓存，命令行扫描
 - [x] 韩国股市：KRX 列表、市值、KOSPI200 / KOSDAQ150（需 KRX_ID / KRX_PW）
 - [x] 指数成分股：S&P 500、美股全市场（纳斯达克代码表）、恒生指数、沪深300/中证500/中证1000/上证50
-- [ ] FastAPI 后端 + 定时扫描
+- [x] FastAPI 后端：登录、扫描任务 CRUD、定时扫描、运行记录与结果、K 线图数据接口
 - [ ] React 前端（中文 / 韩文）
 - [ ] Docker 部署
 - [ ] 回测
@@ -37,3 +37,14 @@ export KRX_ID=你的账号
 export KRX_PW=你的密码
 python -m screener.cli --market kr --universe kospi200
 ```
+
+## 网站后端
+
+```bash
+pip install -e ".[server]"
+cp .env.example .env   # 填写 APP_PASSWORD 等
+set -a; . ./.env; set +a
+uvicorn server.main:app --host 0.0.0.0 --port 8000
+```
+
+主要接口：`POST /api/login`、`/api/tasks`（增删改查）、`POST /api/tasks/{id}/run`、`/api/runs`、`/api/runs/{id}`、`/api/chart`。
