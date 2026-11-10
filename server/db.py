@@ -63,6 +63,16 @@ class Result(SQLModel, table=True):
     rsi_diff: Optional[float] = None
 
 
+class KakaoToken(SQLModel, table=True):
+    """KakaoTalk「나에게 보내기」的 OAuth 令牌（单用户，只有一行）。"""
+    id: int = Field(default=1, primary_key=True)
+    access_token: str
+    access_expires_at: datetime
+    refresh_token: str
+    refresh_expires_at: Optional[datetime] = None
+    updated_at: datetime = Field(default_factory=now)
+
+
 engine = None
 
 

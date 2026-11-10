@@ -18,6 +18,14 @@ class Settings:
         self.max_workers = int(os.environ.get("SCAN_WORKERS", "2"))
         self.enable_scheduler = os.environ.get("ENABLE_SCHEDULER", "1") == "1"
         self.https_only = os.environ.get("COOKIE_SECURE", "0") == "1"
+        # KakaoTalk：Kakao Developers 应用的 REST API 키（必填）和 Client Secret（若启用）
+        self.kakao_rest_key = os.environ.get("KAKAO_REST_API_KEY", "")
+        self.kakao_client_secret = os.environ.get("KAKAO_CLIENT_SECRET", "")
+        self.notify_lang = os.environ.get("NOTIFY_LANG", "zh")  # zh / ko
+
+    @property
+    def kakao_redirect_uri(self) -> str:
+        return f"{self.public_url}/api/kakao/callback"
 
     @property
     def cache_dir(self) -> str:

@@ -62,6 +62,11 @@ export interface ChartData {
   config: { rsi_period: number; oversold: number | null; overbought: number | null };
 }
 
+export interface KakaoStatus {
+  configured: boolean; connected: boolean; refresh_expires_at: string | null;
+  redirect_uri: string; lang: string;
+}
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -98,6 +103,9 @@ export const api = {
   runTask: (id: number) => req<{ run_id: number }>("POST", `/api/tasks/${id}/run`),
   runs: (taskId?: number) => req<Run[]>("GET", `/api/runs${taskId ? `?task_id=${taskId}` : ""}`),
   run: (id: number) => req<RunDetail>("GET", `/api/runs/${id}`),
+  kakaoStatus: () => req<KakaoStatus>("GET", "/api/kakao/status"),
+  kakaoTest: () => req("POST", "/api/kakao/test"),
+  kakaoDisconnect: () => req("DELETE", "/api/kakao"),
   chart: (p: { market: string; symbol: string; timeframe: string; run_id?: number }) => {
     const q = new URLSearchParams({ market: p.market, symbol: p.symbol, timeframe: p.timeframe });
     if (p.run_id) q.set("run_id", String(p.run_id));

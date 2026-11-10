@@ -58,10 +58,6 @@ async def lifespan(app: FastAPI):
     if db.engine is None:
         db.init_db()
     jobs.start()
-    try:
-        from . import notify  # noqa: F401  注册通知回调
-    except ImportError:
-        pass
     yield
     jobs.stop()
 
@@ -309,6 +305,11 @@ def chart(market: str, symbol: str, timeframe: str = "1d", run_id: Optional[int]
 
 def _404():
     raise HTTPException(404, "不存在")
+
+
+from . import notify  # noqa: E402  注册 KakaoTalk 路由与通知回调
+
+app.include_router(notify.router)
 
 
 # ---------------------------------------------------------------- 前端静态文件

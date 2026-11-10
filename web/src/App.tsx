@@ -5,6 +5,7 @@ import { useI18n } from "./i18n";
 import Login from "./pages/Login";
 import RunView from "./pages/RunView";
 import Runs from "./pages/Runs";
+import Settings from "./pages/Settings";
 import TaskEdit from "./pages/TaskEdit";
 import Tasks from "./pages/Tasks";
 
@@ -33,6 +34,7 @@ export default function App() {
         <nav>
           <NavLink to="/tasks">{t("tasks")}</NavLink>
           <NavLink to="/runs">{t("history")}</NavLink>
+          <NavLink to="/settings">{t("settings")}</NavLink>
         </nav>
         <select value={lang} onChange={(e) => setLang(e.target.value as "zh" | "ko")} aria-label="language">
           <option value="zh">中文</option>
@@ -49,6 +51,7 @@ export default function App() {
             <Route path="/tasks/:id" element={<TaskEdit meta={meta} />} />
             <Route path="/runs" element={<Runs />} />
             <Route path="/runs/:id" element={<RunView />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/tasks" replace />} />
           </Routes>
         )}
