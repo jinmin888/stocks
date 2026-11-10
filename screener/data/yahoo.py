@@ -12,11 +12,26 @@ from .base import OHLCV_COLUMNS, DataSource, Instrument
 class YahooSource(DataSource):
     timeframes = ["1d", "1w", "1M"]
 
-    def __init__(self, market: str):
+    def __init__(self, market: str, cache_root: str = "data/cache"):
         self.market = market
+        self.cache_root = cache_root
 
     def universe(self, name: str) -> List[Instrument]:
-        raise NotImplementedError(f"{self.market}: 指数成分股 / 全市场列表尚未接入，请先使用自定义列表")
+        from . import universes as u
+
+        builders = {("us", "sp500"): u.sp500, ("us", "all"): u.us_all, ("hk", "hsi"): u.hsi}
+        build = builders.get((self.market, name))
+        if build is None:
+            opts = [n for m, n in builders if m == self.market]
+            raise ValueError(f"{self.market} 支持的范围：{' / '.join(opts)}")
+        items = u.cached(self.cache_root, f"{self.market}_{name}", build)
+        if name == "all":
+            # 全市场需要逐只查询市值，先剔除 ETF 以减少请求
+            items = [i for i in items if not i.is_etf]
+            caps = {i.symbol: i.market_cap for i in self.instruments([i.symbol for i in items])}
+            for i in items:
+                i.market_cap = caps.get(i.symbol)
+        return items
 
     def instruments(self, symbols: List[str]) -> List[Instrument]:
         import yfinance as yf

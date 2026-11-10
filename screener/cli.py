@@ -12,6 +12,7 @@ import yaml
 from . import filters
 from .config import ScreenConfig
 from .data import get_source
+from .data.registry import DEFAULT_UNIVERSE
 from .data.cache import Store, load_bars
 from .data.timeframes import bar_end
 from .screen import screen
@@ -37,7 +38,9 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="顶底分型 + RSI 背离筛选")
     p.add_argument("--market", required=True, choices=["crypto", "cn", "hk", "us", "kr"])
     p.add_argument("--timeframe", default="1d")
-    p.add_argument("--universe", help="crypto: topN / all；cn: all；kr: all / kospi / kosdaq / kospi200 / kosdaq150")
+    p.add_argument("--universe", help=(
+        "crypto: topN / all；us: sp500 / all；hk: hsi；"
+        "cn: all / csi300 / csi500 / csi1000 / sse50；kr: all / kospi / kosdaq / kospi200 / kosdaq150"))
     p.add_argument("--symbols", nargs="*", help="自定义列表")
     p.add_argument("--exchange", default="binance", help="加密货币交易所")
     p.add_argument("--config", help="YAML 配置文件")
@@ -46,7 +49,8 @@ def main(argv=None) -> int:
     a = p.parse_args(argv)
 
     cfg = ScreenConfig.model_validate(yaml.safe_load(open(a.config)) or {}) if a.config else ScreenConfig()
-    src = get_source(a.market, exchange=a.exchange) if a.market == "crypto" else get_source(a.market)
+    src = get_source(a.market, a.cache, exchange=a.exchange) if a.market == "crypto" \
+        else get_source(a.market, a.cache)
     if a.timeframe not in src.timeframes:
         p.error(f"{a.market} 支持的周期：{src.timeframes}")
 
@@ -54,7 +58,7 @@ def main(argv=None) -> int:
         insts = src.instruments(a.symbols)
     else:
         try:
-            insts = src.universe(a.universe or ("top100" if a.market == "crypto" else "all"))
+            insts = src.universe(a.universe or DEFAULT_UNIVERSE[a.market])
         except (RuntimeError, NotImplementedError, ValueError) as e:
             print(f"错误：{e}", file=sys.stderr)
             return 2

@@ -21,8 +21,8 @@ def _require_login() -> None:
 
 
 class KoreaSource(YahooSource):
-    def __init__(self):
-        super().__init__("kr")
+    def __init__(self, cache_root: str = "data/cache"):
+        super().__init__("kr", cache_root)
         self._suffix: Dict[str, str] = {}
 
     def _listing(self) -> pd.DataFrame:

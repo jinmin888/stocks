@@ -14,9 +14,19 @@ class ChinaSource(DataSource):
     market = "cn"
     timeframes = ["1d", "1w", "1M"]
 
+    def __init__(self, cache_root: str = "data/cache"):
+        self.cache_root = cache_root
+
     def universe(self, name: str = "all") -> List[Instrument]:
+        from . import universes as u
+
+        if name in u.CSINDEX:
+            return u.cached(self.cache_root, f"cn_{name}", lambda: u.csindex(u.CSINDEX[name]))
         if name != "all":
-            raise NotImplementedError("A 股指数成分股尚未接入")
+            raise ValueError(f"A 股范围：all / {' / '.join(u.CSINDEX)}")
+        return u.cached(self.cache_root, "cn_all", self._all)
+
+    def _all(self) -> List[Instrument]:
         import akshare as ak
 
         spot = None

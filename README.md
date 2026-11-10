@@ -9,7 +9,7 @@
 - [x] 筛选核心：包含处理、分型识别与强弱分级、严格笔过滤、RSI、常规/隐藏背离、组合逻辑
 - [x] 数据源：加密货币（ccxt）、A 股（akshare）、美股/港股（yfinance），本地 Parquet 缓存，命令行扫描
 - [x] 韩国股市：KRX 列表、市值、KOSPI200 / KOSDAQ150（需 KRX_ID / KRX_PW）
-- [ ] 美股、港股、A 股指数成分股列表
+- [x] 指数成分股：S&P 500、美股全市场（纳斯达克代码表）、恒生指数、沪深300/中证500/中证1000/上证50
 - [ ] FastAPI 后端 + 定时扫描
 - [ ] React 前端（中文 / 韩文）
 - [ ] Docker 部署
@@ -26,7 +26,8 @@ pytest
 
 ```bash
 python -m screener.cli --market crypto --timeframe 4h --universe top100
-python -m screener.cli --market us --symbols AAPL MSFT NVDA --config config.yaml --csv out.csv
+python -m screener.cli --market us --universe sp500 --config config.yaml --csv out.csv
+python -m screener.cli --market cn --universe csi300
 ```
 
 韩国股市全市场 / 指数扫描需要 KRX 数据平台账号（data.krx.co.kr，免费注册）：
