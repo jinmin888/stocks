@@ -10,11 +10,22 @@ function scheduleFor(meta: Meta, market: Market, timeframe: string) {
     ?? { cron: "", timezone: "Asia/Seoul" };
 }
 
+const ALL_MARKETS: Market[] = ["crypto", "kr", "cn", "us", "hk"];
+const PLACEHOLDER: Record<Market, string> = {
+  crypto: "BTC/USDT ETH/USDT", kr: "005930 000660", cn: "600519 000858", us: "AAPL NVDA", hk: "0700.HK 9988.HK",
+};
+
+/** 所有已选市场都支持的周期 */
+function commonTimeframes(meta: Meta, markets: Market[]): string[] {
+  if (!markets.length) return [];
+  return meta.markets[markets[0]].timeframes.filter((tf) => markets.every((m) => meta.markets[m].timeframes.includes(tf)));
+}
+
 function blank(meta: Meta): TaskInput {
   const s = scheduleFor(meta, "crypto", "4h");
   return {
-    name: "", market: "crypto", timeframe: "4h", universe: meta.default_universe.crypto, symbols: [],
-    exchange: "binance", config: structuredClone(meta.default_config), cron: s.cron,
+    name: "", markets: ["crypto"], universes: { crypto: meta.default_universe.crypto }, symbols_by_market: {},
+    timeframe: "4h", exchange: "binance", config: structuredClone(meta.default_config), cron: s.cron,
     timezone: s.timezone, enabled: true, notify: true,
   };
 }
@@ -51,7 +62,7 @@ export default function TaskEdit({ meta }: { meta: Meta }) {
   const { id } = useParams();
   const nav = useNavigate();
   const [task, setTask] = useState<TaskInput | null>(id ? null : blank(meta));
-  const [symbolsText, setSymbolsText] = useState("");
+  const [symbolsText, setSymbolsText] = useState<Partial<Record<Market, string>>>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -60,7 +71,7 @@ export default function TaskEdit({ meta }: { meta: Meta }) {
     api.task(Number(id)).then((x) => {
       const { id: _i, last_run: _l, next_run: _n, ...rest } = x;
       setTask(rest);
-      setSymbolsText(x.symbols.join("\n"));
+      setSymbolsText(Object.fromEntries(Object.entries(x.symbols_by_market).map(([k, v]) => [k, (v ?? []).join("\n")])));
     }).catch((e) => setError(e.message));
   }, [id]);
 
@@ -73,7 +84,9 @@ export default function TaskEdit({ meta }: { meta: Meta }) {
     fn(c);
     set({ config: c });
   };
-  const m = meta.markets[task.market];
+  const timeframes = commonTimeframes(meta, task.markets);
+  const has = (m: Market) => task.markets.includes(m);
+  const stockMarkets = task.markets.filter((m) => m !== "crypto");
   const strengthOpts = (
     <>
       <option value="">{t("any")}</option>
@@ -82,14 +95,29 @@ export default function TaskEdit({ meta }: { meta: Meta }) {
     </>
   );
 
-  const changeMarket = (market: Market) => {
-    const mk = meta.markets[market];
-    const timeframe = mk.timeframes.includes(task.timeframe) ? task.timeframe : mk.timeframes[0];
-    const s = scheduleFor(meta, market, timeframe);
-    set({ market, timeframe, universe: meta.default_universe[market], cron: s.cron, timezone: s.timezone });
+  const toggleMarket = (market: Market, on: boolean) => {
+    // 保持固定顺序；至少保留一个市场
+    const markets = ALL_MARKETS.filter((m) => (m === market ? on : task.markets.includes(m)));
+    if (!markets.length) return;
+    const tfs = commonTimeframes(meta, markets);
+    if (!tfs.length) {
+      setError(t("noCommonTimeframe"));
+      return;
+    }
+    setError("");
+    const timeframe = tfs.includes(task.timeframe) ? task.timeframe : tfs[0];
+    const universes = { ...task.universes };
+    if (on && !universes[market]) universes[market] = meta.default_universe[market];
+    const patch: Partial<TaskInput> = { markets, timeframe, universes };
+    // 第一个市场变化或周期变化时，换成对应的建议定时
+    if (markets[0] !== task.markets[0] || timeframe !== task.timeframe) {
+      const sch = scheduleFor(meta, markets[0], timeframe);
+      Object.assign(patch, { cron: sch.cron, timezone: sch.timezone });
+    }
+    set(patch);
   };
   const changeTimeframe = (timeframe: string) => {
-    const s = scheduleFor(meta, task.market, timeframe);
+    const s = scheduleFor(meta, task.markets[0], timeframe);
     set({ timeframe, cron: s.cron, timezone: s.timezone });
   };
 
@@ -98,8 +126,9 @@ export default function TaskEdit({ meta }: { meta: Meta }) {
     setError("");
     const body: TaskInput = {
       ...task,
-      name: task.name.trim() || `${MARKET_NAMES[task.market][lang]} ${task.timeframe}`,
-      symbols: symbolsText.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean),
+      name: task.name.trim() || `${task.markets.map((m) => MARKET_NAMES[m][lang]).join("+")} ${task.timeframe}`,
+      symbols_by_market: Object.fromEntries(task.markets.map((m) => [m,
+        (symbolsText[m] ?? "").split(/[\s,]+/).map((x) => x.trim()).filter(Boolean)])),
       cron: task.cron?.trim() || null,
     };
     try {
@@ -122,35 +151,51 @@ export default function TaskEdit({ meta }: { meta: Meta }) {
           <Field label={t("name")}>
             <input value={task.name} onChange={(e) => set({ name: e.target.value })} />
           </Field>
-          <Field label={t("market")}>
-            <select value={task.market} onChange={(e) => changeMarket(e.target.value as Market)}>
-              {Object.keys(meta.markets).map((k) => <option key={k} value={k}>{MARKET_NAMES[k][lang]}</option>)}
-            </select>
-          </Field>
-          <Field label={t("timeframe")}>
+          <Field label={t("timeframe")} hint={task.markets.length > 1 ? t("timeframeCommonHint") : undefined}>
             <select value={task.timeframe} onChange={(e) => changeTimeframe(e.target.value)}>
-              {m.timeframes.map((tf) => <option key={tf}>{tf}</option>)}
+              {timeframes.map((tf) => <option key={tf}>{tf}</option>)}
             </select>
           </Field>
-          <Field label={t("universe")}>
-            <select value={task.universe ?? ""} onChange={(e) => set({ universe: e.target.value })}>
-              {[...m.universes, ...(task.universe && !m.universes.includes(task.universe) ? [task.universe] : [])]
-                .map((u) => <option key={u} value={u}>{UNIVERSE_NAMES[u]?.[lang] ?? u}</option>)}
-            </select>
-          </Field>
-          {m.exchanges && (
-            <Field label={t("exchange")}>
-              <select value={task.exchange} onChange={(e) => set({ exchange: e.target.value })}>
-                {m.exchanges.map((x) => <option key={x}>{x}</option>)}
-              </select>
-            </Field>
-          )}
         </div>
-        <Field label={t("customSymbols")} hint={t("symbolsHint")}>
-          <textarea value={symbolsText} onChange={(e) => setSymbolsText(e.target.value)}
-            placeholder={{ crypto: "BTC/USDT ETH/USDT", kr: "005930 000660", cn: "600519 000858",
-              us: "AAPL NVDA", hk: "0700.HK 9988.HK" }[task.market]} />
-        </Field>
+        <div className="field">
+          <span>{t("market")}</span>
+          <div className="row" style={{ gap: 16 }}>
+            {ALL_MARKETS.map((m) => (
+              <Check key={m} label={MARKET_NAMES[m][lang]} checked={has(m)} onChange={(v) => toggleMarket(m, v)} />
+            ))}
+          </div>
+        </div>
+        <div className="market-grid">
+          {task.markets.map((m) => {
+            const mk = meta.markets[m];
+            const uni = task.universes[m] ?? meta.default_universe[m];
+            return (
+              <div className="market-card stack" key={m}>
+                <strong>{MARKET_NAMES[m][lang]}</strong>
+                <div className="row">
+                  <Field label={t("universe")}>
+                    <select value={uni} onChange={(e) => set({ universes: { ...task.universes, [m]: e.target.value } })}>
+                      {[...mk.universes, ...(mk.universes.includes(uni) ? [] : [uni])]
+                        .map((u) => <option key={u} value={u}>{UNIVERSE_NAMES[u]?.[lang] ?? u}</option>)}
+                    </select>
+                  </Field>
+                  {mk.exchanges && (
+                    <Field label={t("exchange")}>
+                      <select value={task.exchange} onChange={(e) => set({ exchange: e.target.value })}>
+                        {mk.exchanges.map((x) => <option key={x}>{x}</option>)}
+                      </select>
+                    </Field>
+                  )}
+                </div>
+                <Field label={t("customSymbols")}>
+                  <textarea value={symbolsText[m] ?? ""} placeholder={PLACEHOLDER[m]}
+                    onChange={(e) => setSymbolsText({ ...symbolsText, [m]: e.target.value })} />
+                </Field>
+              </div>
+            );
+          })}
+        </div>
+        <div className="muted small">{t("symbolsHint")}</div>
       </div>
 
       <fieldset className="panel">
@@ -159,9 +204,9 @@ export default function TaskEdit({ meta }: { meta: Meta }) {
           <Field label={t("cron")} hint={t("cronHint")}>
             <div className="row">
               <input value={task.cron ?? ""} onChange={(e) => set({ cron: e.target.value })}
-                style={{ flex: 1, fontFamily: "monospace" }} />
+                style={{ flex: 1, minWidth: 150, fontFamily: "monospace" }} />
               <button type="button" onClick={() => {
-                const s = scheduleFor(meta, task.market, task.timeframe);
+                const s = scheduleFor(meta, task.markets[0], task.timeframe);
                 set({ cron: s.cron, timezone: s.timezone });
               }}>{t("useDefault")}</button>
             </div>
@@ -302,11 +347,11 @@ export default function TaskEdit({ meta }: { meta: Meta }) {
         <fieldset>
           <legend>{t("filters")}</legend>
           <div className="form-grid">
-            {task.market === "cn" && (
+            {has("cn") && (
               <Check label={t("excludeSt")} checked={cfg.filters.exclude_st}
                 onChange={(v) => setCfg((c) => { c.filters.exclude_st = v; })} />
             )}
-            {task.market !== "crypto" && (
+            {stockMarkets.length > 0 && (
               <>
                 <Check label={t("excludeEtf")} checked={cfg.filters.exclude_etf}
                   onChange={(v) => setCfg((c) => { c.filters.exclude_etf = v; })} />
@@ -314,16 +359,18 @@ export default function TaskEdit({ meta }: { meta: Meta }) {
                   <Num allowNull min={0} value={cfg.filters.min_list_days}
                     onChange={(v) => setCfg((c) => { c.filters.min_list_days = v; })} />
                 </Field>
-                <Field label={t("minMarketCap")} hint={t("emptyOff")}>
-                  <input type="number" style={{ width: 160 }}
-                    value={cfg.filters.min_market_cap[task.market] ?? ""}
-                    onChange={(e) => setCfg((c) => {
-                      c.filters.min_market_cap[task.market] = e.target.value === "" ? null : Number(e.target.value);
-                    })} />
-                </Field>
               </>
             )}
-            {task.market === "crypto" && (
+            {stockMarkets.map((m) => (
+              <Field key={m} label={`${t("minMarketCap")} · ${MARKET_NAMES[m][lang]}`} hint={t("emptyOff")}>
+                <input type="number" style={{ width: 160 }}
+                  value={cfg.filters.min_market_cap[m] ?? ""}
+                  onChange={(e) => setCfg((c) => {
+                    c.filters.min_market_cap[m] = e.target.value === "" ? null : Number(e.target.value);
+                  })} />
+              </Field>
+            ))}
+            {has("crypto") && (
               <Check label={t("excludeTokenized")} checked={cfg.filters.exclude_tokenized}
                 onChange={(v) => setCfg((c) => { c.filters.exclude_tokenized = v; })} />
             )}

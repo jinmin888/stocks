@@ -86,6 +86,9 @@ tr.selected td { background: var(--accent-weak); }
 .badge.running, .badge.queued { background: var(--accent-weak); color: var(--accent); }
 .badge.s-strong { font-weight: 700; }
 
+.market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.market-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; gap: 8px; }
+.market-card textarea { min-height: 54px; }
 .task-card { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .task-card .meta { display: flex; gap: 16px; flex-wrap: wrap; color: var(--muted); font-size: 12px; }
 
@@ -102,5 +105,9 @@ tr.selected td { background: var(--accent-weak); }
   .topbar .brand { display: none; }
   .container { padding: 12px; }
   .chart-box { height: 420px; }
-  .task-card { grid-template-columns: 1fr; }
+  .market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.market-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; gap: 8px; }
+.market-card textarea { min-height: 54px; }
+.task-card { grid-template-columns: 1fr; }
 }
+code.copy { user-select: all; background: var(--accent-weak); padding: 1px 6px; border-radius: 4px; word-break: break-all; }

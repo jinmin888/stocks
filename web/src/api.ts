@@ -27,23 +27,24 @@ export interface Run {
   status: "queued" | "running" | "done" | "failed";
   started_at: string | null; finished_at: string | null; created_at: string;
   total: number; done: number; message: string; error: string | null; failed: string[];
-  result_count: number; task_name: string | null; market: Market; timeframe: string;
+  result_count: number; task_name: string | null; markets: Market[]; timeframe: string;
 }
 
-export interface Task {
-  id: number; name: string; market: Market; timeframe: string; universe: string | null;
-  symbols: string[]; exchange: string; config: ScreenConfig; cron: string | null;
-  timezone: string; enabled: boolean; notify: boolean;
-  last_run: Run | null; next_run: string | null;
+export interface TaskInput {
+  name: string; markets: Market[]; universes: Partial<Record<Market, string | null>>;
+  symbols_by_market: Partial<Record<Market, string[]>>; timeframe: string; exchange: string;
+  config: ScreenConfig; cron: string | null; timezone: string; enabled: boolean; notify: boolean;
 }
-export type TaskInput = Omit<Task, "id" | "last_run" | "next_run">;
+export interface Task extends TaskInput {
+  id: number; last_run: Run | null; next_run: string | null;
+}
 
 export interface ResultRow {
-  id: number; symbol: string; name: string; side: "bottom" | "top"; date: string; close: number;
+  id: number; market: Market; symbol: string; name: string; side: "bottom" | "top"; date: string; close: number;
   rsi: number | null; fractal_strength: string | null; divergence: string | null;
   divergence_score: number | null; price_change_pct: number | null; rsi_diff: number | null;
 }
-export interface RunDetail extends Run { results: ResultRow[]; snapshot: Task }
+export interface RunDetail extends Run { results: ResultRow[]; snapshot: TaskInput }
 
 export interface Meta {
   markets: Record<Market, { timeframes: string[]; universes: string[]; exchanges?: string[] }>;

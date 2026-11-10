@@ -65,12 +65,26 @@ export default function Settings() {
           </>
         )}
         {msg && <div className={msg.ok ? "" : "error"}>{msg.text}</div>}
+        {msg && !msg.ok && <div className="muted small">{t("kakaoErrors")}</div>}
         {st && (
           <div className="muted small stack" style={{ gap: 4 }}>
-            <div>{t("kakaoRedirect")}: <code>{st.redirect_uri}</code></div>
             <div>{t("kakaoLang")}: <code>{st.lang}</code></div>
           </div>
         )}
+      </div>
+
+      <div className="panel stack">
+        <h2>{t("kakaoSetupTitle")}</h2>
+        <ol className="stack" style={{ gap: 6, margin: 0, paddingLeft: 20 }}>
+          <li>{t("kakaoStep1")}</li>
+          <li>{t("kakaoStep2")}</li>
+          <li>{t("kakaoStep3")}<br /><code className="copy">{st?.redirect_uri ?? "…"}</code></li>
+          <li><strong>{t("kakaoStep4")}</strong></li>
+          <li>{t("kakaoStep5")}<br /><code className="copy">{st ? new URL(st.redirect_uri).origin : "…"}</code></li>
+          <li>{t("kakaoStep6")}</li>
+        </ol>
+        <div className="muted small">{t("kakaoConsentNote")}</div>
+        <div className="muted small">{t("kakaoErrors")}</div>
       </div>
     </div>
   );

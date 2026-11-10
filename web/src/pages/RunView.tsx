@@ -10,7 +10,7 @@ type SortKey = keyof ResultRow;
 const STRENGTH_ORDER: Record<string, number> = { strong: 3, medium: 2, weak: 1 };
 
 function toCsv(rows: ResultRow[]): string {
-  const cols: SortKey[] = ["symbol", "name", "side", "date", "close", "rsi", "fractal_strength",
+  const cols: SortKey[] = ["market", "symbol", "name", "side", "date", "close", "rsi", "fractal_strength",
     "divergence", "divergence_score", "price_change_pct", "rsi_diff"];
   const esc = (v: unknown) => {
     const s = v === null || v === undefined ? "" : String(v);
@@ -68,12 +68,13 @@ export default function RunView() {
     URL.revokeObjectURL(a.href);
   };
   const pct = run.total ? Math.round((run.done / run.total) * 100) : 0;
+  const multi = run.markets.length > 1;
 
   return (
     <div className="stack">
       <div className="row">
         <h1 style={{ margin: 0 }}>{run.task_name}</h1>
-        <span className="badge">{MARKET_NAMES[run.market]?.[lang]}</span>
+        {run.markets.map((m) => <span className="badge" key={m}>{MARKET_NAMES[m]?.[lang] ?? m}</span>)}
         <span className="badge">{run.timeframe}</span>
         <RunStatus run={run} />
         <span className="spacer" />
@@ -108,6 +109,7 @@ export default function RunView() {
                 <table>
                   <thead>
                     <tr>
+                      {multi && header("market", t("market"))}
                       {header("symbol", t("symbol"))}
                       {header("side", t("side"))}
                       {header("fractal_strength", t("strength"))}
@@ -124,6 +126,7 @@ export default function RunView() {
                     {rows.map((r) => (
                       <tr key={r.id} className={`clickable${selected?.id === r.id ? " selected" : ""}`}
                         onClick={() => setSelected(r)}>
+                        {multi && <td><span className="badge">{MARKET_NAMES[r.market]?.[lang] ?? r.market}</span></td>}
                         <td><strong>{r.symbol}</strong> <span className="muted small">{r.name}</span></td>
                         <td><span className={`badge ${r.side === "bottom" ? "bull" : "bear"}`}>
                           {r.side === "bottom" ? "▲" : "▼"} {t(r.side)}</span></td>
@@ -145,7 +148,7 @@ export default function RunView() {
           </div>
           {selected && (
             <div className="panel">
-              <Chart market={run.market} symbol={selected.symbol} timeframe={run.timeframe} runId={run.id}
+              <Chart market={selected.market || run.markets[0]} symbol={selected.symbol} timeframe={run.timeframe} runId={run.id}
                 title={`${selected.symbol} ${selected.name}`} onClose={() => setSelected(null)} />
             </div>
           )}

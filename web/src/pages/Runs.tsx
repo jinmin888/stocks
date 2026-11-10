@@ -33,7 +33,7 @@ export default function Runs() {
                 <tr key={r.id}>
                   <td>{fmtTime(r.created_at, lang)} <span className="muted small">{t(`trigger_${r.trigger}` as Key)}</span></td>
                   <td>{r.task_name}</td>
-                  <td>{MARKET_NAMES[r.market]?.[lang]}</td>
+                  <td>{r.markets.map((m) => MARKET_NAMES[m]?.[lang] ?? m).join(" + ")}</td>
                   <td>{r.timeframe}</td>
                   <td><RunStatus run={r} /></td>
                   <td><Link to={`/runs/${r.id}`}>{t("view")}</Link></td>

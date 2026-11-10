@@ -43,12 +43,17 @@ export default function Tasks() {
             <div className="stack" style={{ gap: 6 }}>
               <div className="row">
                 <strong>{task.name}</strong>
-                <span className="badge">{MARKET_NAMES[task.market][lang]}</span>
                 <span className="badge">{task.timeframe}</span>
-                <span className="badge">
-                  {task.symbols.length ? `${t("customSymbols")} · ${task.symbols.length}`
-                    : UNIVERSE_NAMES[task.universe ?? ""]?.[lang] ?? task.universe}
-                </span>
+                {task.markets.map((m) => {
+                  const syms = task.symbols_by_market[m] ?? [];
+                  const uni = task.universes[m] ?? "";
+                  return (
+                    <span className="badge" key={m}>
+                      {MARKET_NAMES[m][lang]} · {syms.length ? `${t("customSymbols")} ${syms.length}`
+                        : UNIVERSE_NAMES[uni]?.[lang] ?? uni}
+                    </span>
+                  );
+                })}
               </div>
               <div className="meta">
                 <span>{t("nextRun")}: {task.enabled && task.cron ? fmtTime(task.next_run, lang) : t("manualOnly")}</span>

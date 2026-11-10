@@ -54,31 +54,41 @@ def enqueue(task_id: int, trigger: str = "manual") -> Optional[int]:
 
 def _execute(run_id: int) -> None:
     with db.session() as s:
-        run = s.get(db.Run, run_id)
-        snap = run.snapshot
-    req = ScanRequest(market=snap["market"], timeframe=snap["timeframe"], universe=snap["universe"],
-                      symbols=snap["symbols"] or [], exchange=snap["exchange"])
-    with _lock(req.market):  # 同一市场串行，避免缓存写冲突和限流
-        _update(run_id, status="running", started_at=db.now(), message="")
-        try:
-            cfg = ScreenConfig.model_validate(snap["config"] or {})
+        snap = s.get(db.Run, run_id).snapshot
+    markets = db.task_markets(snap)
+    multi = len(markets) > 1
+    _update(run_id, status="running", started_at=db.now(), message="")
+    try:
+        cfg = ScreenConfig.model_validate(snap["config"] or {})
+        progress_by_market: Dict[str, tuple] = {}
+        total = 0
+        failed: list = []
+        for market, universe, symbols in markets:
+            req = ScanRequest(market=market, timeframe=snap["timeframe"], universe=universe,
+                              symbols=symbols, exchange=snap.get("exchange", "binance"))
 
-            def progress(done, total, msg):
-                fields = {"done": done, "total": total}
+            def progress(done, tot, msg, market=market):
+                progress_by_market[market] = (done, tot)
+                fields = {"done": sum(d for d, _ in progress_by_market.values()),
+                          "total": sum(t for _, t in progress_by_market.values())}
                 if msg:
-                    fields["message"] = msg[:500]
+                    fields["message"] = (f"[{market}] {msg}" if multi else msg)[:500]
                 _update(run_id, **fields)
 
-            out = run_scan(req, cfg, settings.cache_dir, settings.retry_wait, progress)
+            with _lock(market):  # 同一市场串行，避免缓存写冲突和限流
+                out = run_scan(req, cfg, settings.cache_dir, settings.retry_wait, progress)
+            progress_by_market[market] = (out.total, out.total)
+            total += out.total
+            failed += [f"{market}:{x}" if multi else x for x in out.failed]
             with db.session() as s:
                 for r in out.rows:
-                    s.add(db.Result(run_id=run_id, **{k: _clean(v) for k, v in r.items()}))
+                    s.add(db.Result(run_id=run_id, market=market, **{k: _clean(v) for k, v in r.items()}))
                 s.commit()
-            _update(run_id, status="done", finished_at=db.now(), total=out.total, done=out.total,
-                    failed=out.failed, message="")
-        except Exception as e:
-            log.exception("run %s failed", run_id)
-            _update(run_id, status="failed", finished_at=db.now(), error=f"{type(e).__name__}: {e}")
+        _update(run_id, status="done", finished_at=db.now(), total=total, done=total,
+                failed=failed, message="")
+    except Exception as e:
+        log.exception("run %s failed", run_id)
+        _update(run_id, status="failed", finished_at=db.now(), error=f"{type(e).__name__}: {e}")
     _notify(run_id)
 
 

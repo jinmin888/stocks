@@ -43,3 +43,12 @@ def test_notify_rules(monkeypatch):
     assert len(sent) == 1  # 手动运行失败不发
     notify.on_run_finished(_run(status="failed", trigger="schedule", error="boom"), task, [])
     assert "boom" in sent[-1][0]
+
+
+def test_summary_multi_market_title():
+    run = db.Run(id=8, status="done", snapshot={"name": "全部", "markets": ["kr", "us"], "timeframe": "1d"})
+    r1 = db.Result(run_id=8, market="kr", symbol="005930.KS", name="삼성전자", side="bottom", date="d", close=1)
+    r2 = db.Result(run_id=8, market="us", symbol="AAPL", name="Apple Inc.", side="bottom", date="d", close=1)
+    text = notify.format_summary(run, [r1, r2], "ko")
+    assert text.splitlines()[0] == "[全部] 한국 주식+미국 주식 1d"
+    assert "삼성전자" in text and "AAPL" in text and "Apple" not in text

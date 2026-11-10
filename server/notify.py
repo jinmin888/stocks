@@ -104,6 +104,14 @@ def send_text(text: str, link: str, button: str) -> None:
                       headers={"Authorization": f"Bearer {token}"},
                       data={"template_object": json.dumps(template, ensure_ascii=False)}, timeout=15)
     if r.status_code != 200:
+        code = None
+        try:
+            code = r.json().get("code")
+        except ValueError:
+            pass
+        if code == -402:  # 用户授权时没有勾选「카카오톡 메시지 전송」
+            raise RuntimeError("카카오톡 메시지 전송 동의가 없습니다 / 未同意发送消息：请在设置页「重新连接」，"
+                               "并在同意画面勾选「카카오톡 메시지 전송」")
         raise RuntimeError(f"Kakao send error {r.status_code}: {r.text[:300]}")
 
 
@@ -113,14 +121,16 @@ PER_SIDE = 5  # 每个方向最多列出几只
 def format_summary(run: db.Run, results: List[db.Result], lang: str) -> str:
     """生成不超过 200 字的摘要：标题、看涨/看跌数量、各方向按强度分排序的前几只。"""
     tx, snap = TXT[lang], run.snapshot or {}
-    market = snap.get("market")
-    title = f"[{snap.get('name', '')}] {MARKET[lang].get(market, '')} {snap.get('timeframe', '')}"
+    markets = [m for m, _, _ in db.task_markets(snap)]
+    names = "+".join(MARKET[lang].get(m, m) for m in markets)
+    title = f"[{snap.get('name', '')}] {names} {snap.get('timeframe', '')}"
     bull = [r for r in results if r.side == "bottom"]
     bear = [r for r in results if r.side == "top"]
     head = [title, f"{tx['bull']} {len(bull)} · {tx['bear']} {len(bear)}"]
 
     def label(r: db.Result) -> str:
         # A 股、韩国股市显示名称；其他市场名称太长或与代码相同，显示代码
+        market = r.market or (markets[0] if markets else "")
         shown = r.name if market in ("cn", "kr") and r.name else r.symbol.removesuffix("/USDT")
         tags = [tx[r.fractal_strength]] if r.fractal_strength else []
         if r.divergence:

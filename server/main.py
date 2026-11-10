@@ -9,7 +9,7 @@ import asyncio
 import hmac
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -124,10 +124,10 @@ def meta(_: str = Depends(require_user)):
 
 class TaskBody(BaseModel):
     name: str
-    market: str
+    markets: List[str]
+    universes: Dict[str, Optional[str]] = {}
+    symbols_by_market: Dict[str, List[str]] = {}
     timeframe: str = "1d"
-    universe: Optional[str] = None
-    symbols: List[str] = []
     exchange: str = "binance"
     config: dict = {}
     cron: Optional[str] = None
@@ -147,12 +147,26 @@ class TaskBody(BaseModel):
             raise ValueError(f"定时表达式无效：{e}")
         return v
 
+    def fields(self) -> dict:
+        """写入数据库的字段；旧版单市场字段填第一个市场，保持兼容。"""
+        d = self.model_dump()
+        first = self.markets[0]
+        d.update(market=first, universe=self.universes.get(first), symbols=self.symbols_by_market.get(first, []))
+        return d
+
     def check(self) -> None:
-        m = MARKETS.get(self.market)
-        if m is None:
-            raise HTTPException(422, f"未知市场：{self.market}")
-        if self.timeframe not in m["timeframes"]:
-            raise HTTPException(422, f"{self.market} 支持的周期：{m['timeframes']}")
+        if not self.markets:
+            raise HTTPException(422, "至少选择一个市场")
+        for market in self.markets:
+            m = MARKETS.get(market)
+            if m is None:
+                raise HTTPException(422, f"未知市场：{market}")
+            if self.timeframe not in m["timeframes"]:
+                raise HTTPException(422, f"{market} 支持的周期：{m['timeframes']}")
+        # 只保留已选市场的设置
+        self.markets = list(dict.fromkeys(self.markets))
+        self.universes = {m: self.universes.get(m) or DEFAULT_UNIVERSE[m] for m in self.markets}
+        self.symbols_by_market = {m: self.symbols_by_market.get(m) or [] for m in self.markets}
         try:
             ScreenConfig.model_validate(self.config)
         except Exception as e:
@@ -179,7 +193,7 @@ def list_tasks(_: str = Depends(require_user)):
 def create_task(body: TaskBody, _: str = Depends(require_user)):
     body.check()
     with db.session() as s:
-        t = db.Task(**body.model_dump())
+        t = db.Task(**body.fields())
         s.add(t)
         s.commit()
         s.refresh(t)
@@ -199,7 +213,7 @@ def update_task(task_id: int, body: TaskBody, _: str = Depends(require_user)):
     body.check()
     with db.session() as s:
         t = s.get(db.Task, task_id) or _404()
-        for k, v in body.model_dump().items():
+        for k, v in body.fields().items():
             setattr(t, k, v)
         t.updated_at = db.now()
         s.add(t)
@@ -234,7 +248,7 @@ def _run_out(r: db.Run, s) -> dict:
     out = r.model_dump(mode="json", exclude={"snapshot"})
     out["result_count"] = n
     out["task_name"] = (r.snapshot or {}).get("name")
-    out["market"] = (r.snapshot or {}).get("market")
+    out["markets"] = [m for m, _, _ in db.task_markets(r.snapshot or {})]
     out["timeframe"] = (r.snapshot or {}).get("timeframe")
     return out
 
