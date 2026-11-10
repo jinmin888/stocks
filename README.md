@@ -11,7 +11,7 @@
 - [x] 韩国股市：KRX 列表、市值、KOSPI200 / KOSDAQ150（需 KRX_ID / KRX_PW）
 - [x] 指数成分股：S&P 500、美股全市场（纳斯达克代码表）、恒生指数、沪深300/中证500/中证1000/上证50
 - [x] FastAPI 后端：登录、扫描任务 CRUD、定时扫描、运行记录与结果、K 线图数据接口
-- [ ] React 前端（中文 / 韩文）
+- [x] React 前端：中文 / 韩文、任务管理、全部筛选条件、结果表格（排序、CSV）、K 线图（分型、背离、RSI）
 - [ ] Docker 部署
 - [ ] 回测
 
@@ -48,3 +48,12 @@ uvicorn server.main:app --host 0.0.0.0 --port 8000
 ```
 
 主要接口：`POST /api/login`、`/api/tasks`（增删改查）、`POST /api/tasks/{id}/run`、`/api/runs`、`/api/runs/{id}`、`/api/chart`。
+
+## 网站前端
+
+```bash
+cd web
+npm install
+npm run dev      # 开发：http://localhost:5173，/api 代理到 8000
+npm run build    # 生产：构建到 web/dist，由后端直接提供
+```

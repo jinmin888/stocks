@@ -5,3 +5,5 @@ __pycache__/
 data/cache/
 .env
 data/
+web/node_modules/
+web/dist/
