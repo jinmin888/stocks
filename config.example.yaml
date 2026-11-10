@@ -24,6 +24,9 @@ divergence:
   recent_bars: 3
   min_fractal_strength: null
   min_price_change_pct: 0.5   # null 关闭
+  min_rsi_diff: 3             # null 关闭
+  score_rsi_weight: 1.0       # 强度分 = RSI差 × 1.0 + 价格差% × 0.2
+  score_price_weight: 0.2
 
 filters:
   exclude_st: true

@@ -27,7 +27,7 @@ class Divergence:
     gap: int
     price_change_pct: float
     rsi_diff: float
-    score: float  # 综合强度分（仅排序用，权重待回测调整）
+    score: float  # 综合强度分（仅排序用，以 RSI 差值为主，权重待回测调整）
 
 
 def _fractal_rsi(f: Fractal, rsi: np.ndarray) -> float:
@@ -79,6 +79,9 @@ def detect(fractals: List[Fractal], rsi: pd.Series, cfg: DivergenceConfig) -> Li
         if cfg.min_price_change_pct is not None and price_pct < cfg.min_price_change_pct:
             continue
         rsi_diff = abs(r2 - r1)
+        if cfg.min_rsi_diff is not None and rsi_diff < cfg.min_rsi_diff:
+            continue
+        score = rsi_diff * cfg.score_rsi_weight + price_pct * cfg.score_price_weight
         out.append(Divergence(side, kind, f1, f2, p1, p2, r1, r2, gap,
-                              price_pct, rsi_diff, score=rsi_diff + price_pct))
+                              price_pct, rsi_diff, score=score))
     return out

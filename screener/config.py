@@ -39,6 +39,11 @@ class DivergenceConfig(BaseModel):
     min_fractal_strength: Optional[Strength] = None  # 第二个分型的最低强度
     # 两个分型点价格至少相差 X%（常规与隐藏背离都适用）；None 表示关闭
     min_price_change_pct: Optional[float] = 0.5
+    # 两个分型点 RSI 至少相差多少；None 表示关闭
+    min_rsi_diff: Optional[float] = 3.0
+    # 强度分 = RSI 差值 × rsi_weight + 价格差% × price_weight（以 RSI 为主，权重待回测调整）
+    score_rsi_weight: float = 1.0
+    score_price_weight: float = 0.2
 
 
 class FilterConfig(BaseModel):

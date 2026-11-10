@@ -46,6 +46,7 @@ def main(argv=None) -> int:
     p.add_argument("--config", help="YAML 配置文件")
     p.add_argument("--csv", help="结果导出 CSV 路径")
     p.add_argument("--cache", default="data/cache")
+    p.add_argument("--retry-wait", type=int, default=300, help="失败标的重试前等待秒数，0 为不重试")
     a = p.parse_args(argv)
 
     cfg = ScreenConfig.model_validate(yaml.safe_load(open(a.config)) or {}) if a.config else ScreenConfig()
@@ -70,21 +71,34 @@ def main(argv=None) -> int:
     print(f"扫描 {len(insts)} 个标的 · {a.market} {a.timeframe}", file=sys.stderr)
 
     store, rows = Store(a.cache), []
-    for n, inst in enumerate(insts, 1):
-        try:
-            df = load_bars(store, src, inst.symbol, a.timeframe)
-            if too_new(df, a.market, cfg.filters.min_list_days):
-                continue
-            for sig in screen(df, cfg):
-                row = sig.to_row()
-                row["date"] = display_time(row["date"], a.market, a.timeframe, cfg.display_tz)
-                rows.append({"symbol": inst.symbol, "name": inst.name, **row})
-        except Exception as e:  # 单个标的失败不影响整体
-            print(f"  {inst.symbol}: {type(e).__name__} {str(e)[:120]}", file=sys.stderr)
-        if n % 50 == 0:
-            print(f"  {n}/{len(insts)}", file=sys.stderr)
-        if a.market == "cn":
-            time.sleep(0.3)  # 东方财富限流
+
+    def run(batch):
+        failed = []
+        for n, inst in enumerate(batch, 1):
+            try:
+                df = load_bars(store, src, inst.symbol, a.timeframe)
+                if too_new(df, a.market, cfg.filters.min_list_days):
+                    continue
+                for sig in screen(df, cfg):
+                    row = sig.to_row()
+                    row["date"] = display_time(row["date"], a.market, a.timeframe, cfg.display_tz)
+                    rows.append({"symbol": inst.symbol, "name": inst.name, **row})
+            except Exception as e:  # 单个标的失败不影响整体
+                failed.append(inst)
+                print(f"  {inst.symbol}: {type(e).__name__} {str(e)[:120]}", file=sys.stderr)
+            if n % 50 == 0:
+                print(f"  {n}/{len(batch)}", file=sys.stderr)
+            if a.market == "cn":
+                time.sleep(0.3)  # 东方财富限流
+        return failed
+
+    failed = run(insts)
+    if failed and a.retry_wait > 0:
+        print(f"{len(failed)} 个标的失败，{a.retry_wait} 秒后重试", file=sys.stderr)
+        time.sleep(a.retry_wait)
+        failed = run(failed)
+    if failed:
+        print(f"注意：{len(failed)} 个标的未取到数据：{' '.join(i.symbol for i in failed)}", file=sys.stderr)
 
     out = pd.DataFrame(rows)
     if out.empty:

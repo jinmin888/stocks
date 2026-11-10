@@ -88,3 +88,10 @@ def test_min_price_change_pct():
     df = regular_bottom_df()  # 两个低点价格差约 0.9%
     assert screen(df, ScreenConfig(divergence=DivergenceConfig(min_price_change_pct=2.0))) == []
     assert screen(df, ScreenConfig(divergence=DivergenceConfig(min_price_change_pct=None)))
+
+
+def test_min_rsi_diff_and_score_weights():
+    df = regular_bottom_df()  # RSI 差约 21
+    assert screen(df, ScreenConfig(divergence=DivergenceConfig(min_rsi_diff=25))) == []
+    d = screen(df, ScreenConfig())[0].divergences[0]
+    assert abs(d.score - (d.rsi_diff + 0.2 * d.price_change_pct)) < 1e-9
