@@ -10,7 +10,10 @@ def get_source(market: str, **kw) -> DataSource:
     if market == "cn":
         from .cn import ChinaSource
         return ChinaSource()
-    if market in ("us", "hk", "kr"):
+    if market == "kr":
+        from .kr import KoreaSource
+        return KoreaSource()
+    if market in ("us", "hk"):
         from .yahoo import YahooSource
         return YahooSource(market)
     raise ValueError(f"unknown market: {market}")

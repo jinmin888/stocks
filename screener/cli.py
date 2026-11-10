@@ -16,11 +16,19 @@ from .data.cache import Store, load_bars
 from .screen import screen
 
 
+def too_new(df: pd.DataFrame, market: str, min_days) -> bool:
+    """股票：历史 K 线不足 min_days 天视为上市不满 N 天（缓存会取约 2 年历史）。"""
+    if market == "crypto" or not min_days or df.empty:
+        return False
+    first = df.index[0].tz_localize(None) if df.index.tz else df.index[0]
+    return (pd.Timestamp.today() - first).days < min_days
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="顶底分型 + RSI 背离筛选")
     p.add_argument("--market", required=True, choices=["crypto", "cn", "hk", "us", "kr"])
     p.add_argument("--timeframe", default="1d")
-    p.add_argument("--universe", help="crypto: topN / all；cn: all")
+    p.add_argument("--universe", help="crypto: topN / all；cn: all；kr: all / kospi / kosdaq / kospi200 / kosdaq150")
     p.add_argument("--symbols", nargs="*", help="自定义列表")
     p.add_argument("--exchange", default="binance", help="加密货币交易所")
     p.add_argument("--config", help="YAML 配置文件")
@@ -36,7 +44,11 @@ def main(argv=None) -> int:
     if a.symbols:
         insts = src.instruments(a.symbols)
     else:
-        insts = src.universe(a.universe or ("top100" if a.market == "crypto" else "all"))
+        try:
+            insts = src.universe(a.universe or ("top100" if a.market == "crypto" else "all"))
+        except (RuntimeError, NotImplementedError, ValueError) as e:
+            print(f"错误：{e}", file=sys.stderr)
+            return 2
     insts = filters.apply(insts, a.market, cfg.filters)
     print(f"扫描 {len(insts)} 个标的 · {a.market} {a.timeframe}", file=sys.stderr)
 
@@ -44,6 +56,8 @@ def main(argv=None) -> int:
     for n, inst in enumerate(insts, 1):
         try:
             df = load_bars(store, src, inst.symbol, a.timeframe)
+            if too_new(df, a.market, cfg.filters.min_list_days):
+                continue
             for sig in screen(df, cfg):
                 rows.append({"symbol": inst.symbol, "name": inst.name, **sig.to_row()})
         except Exception as e:  # 单个标的失败不影响整体
