@@ -1,0 +1,15 @@
+[project]
+name = "screener"
+version = "0.1.0"
+description = "Multi-market stock/crypto screener: fractals (顶底分型) and RSI divergence"
+requires-python = ">=3.10"
+dependencies = ["pandas>=2.0", "numpy>=1.24", "pydantic>=2.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[tool.setuptools]
+packages = ["screener"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
