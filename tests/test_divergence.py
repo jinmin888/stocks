@@ -82,3 +82,9 @@ def test_logic_and_direction():
     strong_only = ScreenConfig(fractal=FractalConfig(min_strength=Strength.STRONG),
                                divergence=DivergenceConfig(enabled=False))
     assert screen(df, strong_only) == []
+
+
+def test_min_price_change_pct():
+    df = regular_bottom_df()  # 两个低点价格差约 0.9%
+    assert screen(df, ScreenConfig(divergence=DivergenceConfig(min_price_change_pct=2.0))) == []
+    assert screen(df, ScreenConfig(divergence=DivergenceConfig(min_price_change_pct=None)))

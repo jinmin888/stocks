@@ -13,7 +13,16 @@ from . import filters
 from .config import ScreenConfig
 from .data import get_source
 from .data.cache import Store, load_bars
+from .data.timeframes import bar_end
 from .screen import screen
+
+
+def display_time(start: pd.Timestamp, market: str, timeframe: str, tz: str) -> str:
+    """加密货币：显示 K 线收盘时刻（display_tz）；股票：显示当地交易日期（周/月线为起始日）。"""
+    if market == "crypto":
+        end = bar_end(start, timeframe).tz_convert(tz)
+        return end.strftime("%Y-%m-%d %H:%M")
+    return start.strftime("%Y-%m-%d")
 
 
 def too_new(df: pd.DataFrame, market: str, min_days) -> bool:
@@ -50,6 +59,10 @@ def main(argv=None) -> int:
             print(f"错误：{e}", file=sys.stderr)
             return 2
     insts = filters.apply(insts, a.market, cfg.filters)
+    if a.market == "crypto" and not a.symbols:
+        uni = a.universe or "top100"
+        if uni.startswith("top"):
+            insts = insts[: int(uni[3:] or 100)]
     print(f"扫描 {len(insts)} 个标的 · {a.market} {a.timeframe}", file=sys.stderr)
 
     store, rows = Store(a.cache), []
@@ -59,7 +72,9 @@ def main(argv=None) -> int:
             if too_new(df, a.market, cfg.filters.min_list_days):
                 continue
             for sig in screen(df, cfg):
-                rows.append({"symbol": inst.symbol, "name": inst.name, **sig.to_row()})
+                row = sig.to_row()
+                row["date"] = display_time(row["date"], a.market, a.timeframe, cfg.display_tz)
+                rows.append({"symbol": inst.symbol, "name": inst.name, **row})
         except Exception as e:  # 单个标的失败不影响整体
             print(f"  {inst.symbol}: {type(e).__name__} {str(e)[:120]}", file=sys.stderr)
         if n % 50 == 0:

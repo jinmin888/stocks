@@ -19,6 +19,7 @@ class Instrument(BaseModel):
     turnover: Optional[float] = None  # 最近成交额（当地货币）
     is_etf: bool = False
     is_st: bool = False
+    is_tokenized: bool = False  # 代币化股票 / 实物资产代币
     list_date: Optional[pd.Timestamp] = None
 
     model_config = {"arbitrary_types_allowed": True}

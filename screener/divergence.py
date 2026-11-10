@@ -76,6 +76,8 @@ def detect(fractals: List[Fractal], rsi: pd.Series, cfg: DivergenceConfig) -> Li
             continue
 
         price_pct = abs(p2 - p1) / p1 * 100 if p1 else 0.0
+        if cfg.min_price_change_pct is not None and price_pct < cfg.min_price_change_pct:
+            continue
         rsi_diff = abs(r2 - r1)
         out.append(Divergence(side, kind, f1, f2, p1, p2, r1, r2, gap,
                               price_pct, rsi_diff, score=rsi_diff + price_pct))

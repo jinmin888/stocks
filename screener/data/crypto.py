@@ -14,6 +14,18 @@ STABLECOINS = {
     "EUR", "EURI", "AEUR", "XUSD", "USDS", "RLUSD", "BFUSD", "UST", "GUSD", "LUSD",
 }
 
+# 黄金等实物资产代币
+COMMODITY_TOKENS = {"PAXG", "XAUT", "XAUM", "KAU", "KAG", "DGX", "PMGT"}
+# Binance 代币化股票所在的内部权限组（未公开文档，可能变化；另可用 filters.extra_tokenized 补充）
+BINANCE_STOCK_TOKEN_GROUP = "TRD_GRP_261"
+
+
+def _is_tokenized(m: dict) -> bool:
+    if m.get("base") in COMMODITY_TOKENS:
+        return True
+    groups = sum((m.get("info") or {}).get("permissionSets") or [[]], [])
+    return BINANCE_STOCK_TOKEN_GROUP in groups
+
 
 class CryptoSource(DataSource):
     market = "crypto"
@@ -34,7 +46,8 @@ class CryptoSource(DataSource):
         self.quote = quote
 
     def universe(self, name: str = "top100") -> List[Instrument]:
-        """'topN'：按 24h 成交额取前 N，剔除稳定币；'all'：全部现货交易对。"""
+        """'topN'：按 24h 成交额取前 N，剔除稳定币；'all'：全部现货交易对。
+        代币化资产在此标记，由 filters 决定是否剔除（剔除后再取前 N 由调用方处理）。"""
         self.ex.load_markets()
         tickers = self.ex.fetch_tickers()
         rows = []
@@ -45,10 +58,9 @@ class CryptoSource(DataSource):
                 continue
             t = tickers.get(sym) or {}
             rows.append(Instrument(symbol=sym, name=m.get("base", ""), market=self.market,
-                                   turnover=t.get("quoteVolume") or 0.0))
+                                   turnover=t.get("quoteVolume") or 0.0,
+                                   is_tokenized=_is_tokenized(m)))
         rows.sort(key=lambda i: i.turnover or 0, reverse=True)
-        if name.startswith("top"):
-            rows = rows[: int(name[3:] or 100)]
         return rows
 
     def fetch(self, symbol: str, timeframe: str, since: Optional[pd.Timestamp] = None,

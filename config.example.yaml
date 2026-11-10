@@ -23,9 +23,14 @@ divergence:
   overbought: 70      # null 关闭
   recent_bars: 3
   min_fractal_strength: null
+  min_price_change_pct: 0.5   # null 关闭
 
 filters:
   exclude_st: true
   exclude_etf: true
   min_list_days: 60
   min_market_cap: {cn: 5.0e9, hk: 5.0e9, us: 1.0e9, kr: 1.0e11, crypto: null}
+  exclude_tokenized: true     # 加密货币：剔除代币化股票、黄金代币
+  extra_tokenized: []
+
+display_tz: Asia/Seoul

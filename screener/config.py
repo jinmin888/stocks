@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import IntEnum
-from typing import Dict, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -37,6 +37,8 @@ class DivergenceConfig(BaseModel):
     overbought: Optional[float] = 70.0
     recent_bars: int = Field(3, ge=1)
     min_fractal_strength: Optional[Strength] = None  # 第二个分型的最低强度
+    # 两个分型点价格至少相差 X%（常规与隐藏背离都适用）；None 表示关闭
+    min_price_change_pct: Optional[float] = 0.5
 
 
 class FilterConfig(BaseModel):
@@ -48,6 +50,9 @@ class FilterConfig(BaseModel):
         "cn": 5e9, "hk": 5e9, "us": 1e9, "kr": 1e11, "crypto": None,
     }
     min_turnover: Dict[str, Optional[float]] = {}
+    # 加密货币：剔除代币化股票（如 MSTRB、QQQB）和黄金等实物资产代币
+    exclude_tokenized: bool = True
+    extra_tokenized: List[str] = []  # 手动补充的剔除名单（币种代码，如 "XAUM"）
 
 
 class ScreenConfig(BaseModel):
@@ -56,3 +61,4 @@ class ScreenConfig(BaseModel):
     logic: Literal["and", "or"] = "and"
     direction: Literal["bottom", "top", "both"] = "both"
     filters: FilterConfig = FilterConfig()
+    display_tz: str = "Asia/Seoul"  # 加密货币信号时间的显示时区

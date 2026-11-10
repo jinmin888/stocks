@@ -19,6 +19,8 @@ def apply(instruments: List[Instrument], market: str, cfg: FilterConfig,
             continue
         if cfg.exclude_etf and i.is_etf:
             continue
+        if cfg.exclude_tokenized and (i.is_tokenized or i.name in cfg.extra_tokenized):
+            continue
         if cfg.min_list_days and i.list_date is not None \
                 and (today - i.list_date).days < cfg.min_list_days:
             continue
