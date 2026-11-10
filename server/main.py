@@ -271,6 +271,59 @@ def get_run(run_id: int, _: str = Depends(require_user)):
                 "results": [x.model_dump(exclude={"run_id"}) for x in results]}
 
 
+# ---------------------------------------------------------------- 按日期查看信号
+
+def _done_results(s, date_prefix: Optional[str] = None):
+    q = (select(db.Result, db.Run).join(db.Run, db.Run.id == db.Result.run_id)
+         .where(db.Run.status == "done"))
+    if date_prefix:
+        q = q.where(db.Result.date.startswith(date_prefix))
+    return s.exec(q).all()
+
+
+@app.get("/api/signals/dates")
+def signal_dates(limit: int = 120, _: str = Depends(require_user)):
+    """有信号的日期（信号 K 线的日期，加密货币为 KST 收盘日期），新的在前。"""
+    with db.session() as s:
+        seen: Dict[str, set] = {}
+        for res, run in _done_results(s):
+            key = (res.market or db.task_markets(run.snapshot or {})[0][0], res.symbol, res.side,
+                   (run.snapshot or {}).get("timeframe"))
+            seen.setdefault(res.date[:10], set()).add(key)
+    days = sorted(seen.items(), key=lambda kv: kv[0], reverse=True)[: min(limit, 1000)]
+    out = []
+    for d, keys in days:
+        out.append({"date": d, "count": len(keys),
+                    "bottom": sum(1 for k in keys if k[2] == "bottom"),
+                    "top": sum(1 for k in keys if k[2] == "top")})
+    return out
+
+
+@app.get("/api/signals")
+def signals(date: str, _: str = Depends(require_user)):
+    """某一天的全部信号；同一标的同方向同周期被多次扫出时只保留最新一次，并列出来源任务。"""
+    if len(date) != 10:
+        raise HTTPException(422, "date 格式：YYYY-MM-DD")
+    with db.session() as s:
+        rows: Dict[tuple, dict] = {}
+        for res, run in _done_results(s, date):
+            snap = run.snapshot or {}
+            market = res.market or db.task_markets(snap)[0][0]
+            tf = snap.get("timeframe")
+            key = (market, res.symbol, res.side, tf)
+            task = snap.get("name")
+            cur = rows.get(key)
+            if cur is None or run.id > cur["run_id"]:
+                tasks = cur["tasks"] if cur else []
+                cur = {**res.model_dump(exclude={"run_id"}), "market": market, "timeframe": tf,
+                       "run_id": run.id, "tasks": tasks,
+                       "found_at": (run.finished_at or run.created_at).isoformat()}
+                rows[key] = cur
+            if task and task not in cur["tasks"]:
+                cur["tasks"].append(task)
+    return sorted(rows.values(), key=lambda r: (r["side"], -(r["divergence_score"] or -1), r["symbol"]))
+
+
 # ---------------------------------------------------------------- K 线图
 
 def _ts(t: pd.Timestamp) -> int:

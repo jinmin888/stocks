@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import RunView from "./pages/RunView";
 import Runs from "./pages/Runs";
 import Settings from "./pages/Settings";
+import Signals from "./pages/Signals";
 import TaskEdit from "./pages/TaskEdit";
 import Tasks from "./pages/Tasks";
 
@@ -32,6 +33,7 @@ export default function App() {
       <header className="topbar">
         <span className="brand">{t("appName")}</span>
         <nav>
+          <NavLink to="/signals">{t("signalsByDate")}</NavLink>
           <NavLink to="/tasks">{t("tasks")}</NavLink>
           <NavLink to="/runs">{t("history")}</NavLink>
           <NavLink to="/settings">{t("settings")}</NavLink>
@@ -45,14 +47,15 @@ export default function App() {
       <main className="container">
         {!meta ? <div className="muted">{t("loading")}</div> : (
           <Routes>
-            <Route path="/" element={<Navigate to="/tasks" replace />} />
+            <Route path="/" element={<Navigate to="/signals" replace />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/tasks/new" element={<TaskEdit meta={meta} />} />
             <Route path="/tasks/:id" element={<TaskEdit meta={meta} />} />
+            <Route path="/signals" element={<Signals />} />
             <Route path="/runs" element={<Runs />} />
             <Route path="/runs/:id" element={<RunView />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="*" element={<Navigate to="/tasks" replace />} />
+            <Route path="*" element={<Navigate to="/signals" replace />} />
           </Routes>
         )}
       </main>

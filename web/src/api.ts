@@ -68,6 +68,11 @@ export interface KakaoStatus {
   redirect_uri: string; lang: string;
 }
 
+export interface SignalDate { date: string; count: number; bottom: number; top: number }
+export interface SignalRow extends ResultRow {
+  timeframe: string; run_id: number; tasks: string[]; found_at: string;
+}
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -104,6 +109,8 @@ export const api = {
   runTask: (id: number) => req<{ run_id: number }>("POST", `/api/tasks/${id}/run`),
   runs: (taskId?: number) => req<Run[]>("GET", `/api/runs${taskId ? `?task_id=${taskId}` : ""}`),
   run: (id: number) => req<RunDetail>("GET", `/api/runs/${id}`),
+  signalDates: () => req<SignalDate[]>("GET", "/api/signals/dates"),
+  signals: (date: string) => req<SignalRow[]>("GET", `/api/signals?date=${encodeURIComponent(date)}`),
   kakaoStatus: () => req<KakaoStatus>("GET", "/api/kakao/status"),
   kakaoTest: () => req("POST", "/api/kakao/test"),
   kakaoDisconnect: () => req("DELETE", "/api/kakao"),

@@ -129,3 +129,24 @@ def test_migrates_legacy_single_market_task(tmp_path):
         t = s.exec(select(db.Task)).one()
     assert t.markets == ["cn"] and t.universes == {"cn": "csi300"}
     assert t.symbols_by_market == {"cn": ["600519"]}
+
+
+def test_signals_by_date(client):
+    login(client)
+    body = {"name": "A", "markets": ["crypto"], "timeframe": "4h", "universes": {"crypto": "top100"}}
+    t1 = client.post("/api/tasks", json=body).json()
+    t2 = client.post("/api/tasks", json={**body, "name": "B"}).json()
+    run_ids = [client.post(f"/api/tasks/{t['id']}/run").json()["run_id"] for t in (t1, t2)]
+    for rid in run_ids:
+        for _ in range(50):
+            if client.get(f"/api/runs/{rid}").json()["status"] == "done":
+                break
+            time.sleep(0.05)
+    dates = client.get("/api/signals/dates").json()
+    assert dates == [{"date": "2026-11-10", "count": 1, "bottom": 1, "top": 0}]
+    rows = client.get("/api/signals", params={"date": "2026-11-10"}).json()
+    assert len(rows) == 1  # 两个任务扫出同一标的，只显示一次
+    assert rows[0]["symbol"] == "BTC/USDT" and rows[0]["timeframe"] == "4h"
+    assert sorted(rows[0]["tasks"]) == ["A", "B"] and rows[0]["run_id"] == max(run_ids)
+    assert client.get("/api/signals", params={"date": "2026-11-09"}).json() == []
+    assert client.get("/api/signals", params={"date": "bad"}).status_code == 422
