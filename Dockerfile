@@ -17,6 +17,8 @@ RUN pip install ".[server]"
 COPY --from=web /web/dist web/dist
 RUN useradd --create-home --uid 1000 app && mkdir -p /data && chown app /data
 COPY docker-entrypoint.sh /usr/local/bin/
+# Windows 检出可能带 CRLF 换行或丢失执行权限，这里统一修正
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh && chmod +x /usr/local/bin/docker-entrypoint.sh
 VOLUME /data
 EXPOSE 8000
 HEALTHCHECK --interval=60s --timeout=5s CMD python -c "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/health')"
