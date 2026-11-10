@@ -7,7 +7,8 @@
 ## 当前进度
 
 - [x] 筛选核心：包含处理、分型识别与强弱分级、严格笔过滤、RSI、常规/隐藏背离、组合逻辑
-- [ ] 数据源适配器（ccxt / pykrx / akshare / yfinance）与本地缓存
+- [x] 数据源：加密货币（ccxt）、A 股（akshare）、美股/港股（yfinance），本地 Parquet 缓存，命令行扫描
+- [ ] 指数成分股列表、韩国股市列表与市值
 - [ ] FastAPI 后端 + 定时扫描
 - [ ] React 前端（中文 / 韩文）
 - [ ] Docker 部署
@@ -18,4 +19,11 @@
 ```bash
 pip install -e ".[dev]"
 pytest
+```
+
+## 命令行扫描
+
+```bash
+python -m screener.cli --market crypto --timeframe 4h --universe top100
+python -m screener.cli --market us --symbols AAPL MSFT NVDA --config config.yaml --csv out.csv
 ```

@@ -1,0 +1,31 @@
+# 复制为 config.yaml 后修改；未写的项使用默认值（见 docs/spec.md）
+logic: and            # and / or
+direction: both       # bottom / top / both
+
+fractal:
+  enabled: true
+  inclusion: true
+  strict_bi: true
+  recent_bars: 1
+  min_strength: null  # null / 2(中) / 3(强)
+  confirm_k4: false
+  volume_check: false
+  volume_ma: 5
+
+divergence:
+  enabled: true
+  rsi_period: 14
+  regular: true
+  hidden: false
+  min_gap: 5
+  max_gap: 60
+  oversold: 30        # null 关闭
+  overbought: 70      # null 关闭
+  recent_bars: 3
+  min_fractal_strength: null
+
+filters:
+  exclude_st: true
+  exclude_etf: true
+  min_list_days: 60
+  min_market_cap: {cn: 5.0e9, hk: 5.0e9, us: 1.0e9, kr: 1.0e11, crypto: null}

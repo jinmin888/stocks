@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import IntEnum
-from typing import Literal, Optional
+from typing import Dict, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -39,8 +39,20 @@ class DivergenceConfig(BaseModel):
     min_fractal_strength: Optional[Strength] = None  # 第二个分型的最低强度
 
 
+class FilterConfig(BaseModel):
+    exclude_st: bool = True
+    exclude_etf: bool = True
+    min_list_days: Optional[int] = 60
+    # 市值下限（当地货币）；None 表示不过滤
+    min_market_cap: Dict[str, Optional[float]] = {
+        "cn": 5e9, "hk": 5e9, "us": 1e9, "kr": 1e11, "crypto": None,
+    }
+    min_turnover: Dict[str, Optional[float]] = {}
+
+
 class ScreenConfig(BaseModel):
     fractal: FractalConfig = FractalConfig()
     divergence: DivergenceConfig = DivergenceConfig()
     logic: Literal["and", "or"] = "and"
     direction: Literal["bottom", "top", "both"] = "both"
+    filters: FilterConfig = FilterConfig()
