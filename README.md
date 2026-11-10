@@ -13,7 +13,7 @@
 - [x] FastAPI 后端：登录、扫描任务 CRUD、定时扫描、运行记录与结果、K 线图数据接口
 - [x] React 前端：中文 / 韩文、任务管理、全部筛选条件、结果表格（排序、CSV）、K 线图（分型、背离、RSI）
 - [x] KakaoTalk 通知（나에게 보내기）：网页上连接授权、自动刷新令牌、扫描结果摘要
-- [ ] Docker 部署
+- [x] Docker 部署（Docker Compose，可选 Caddy 自动 HTTPS），见 [docs/deploy.md](docs/deploy.md)
 - [ ] 回测
 
 ## 开发

@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/data
+    ports:
+      # 没有域名时直接用 http://服务器IP:8000 访问；启用 Caddy 后可改为 "127.0.0.1:8000:8000"
+      - "8000:8000"
+
+  # 有域名后启用 HTTPS：在 .env 设置 DOMAIN，然后 docker compose --profile https up -d
+  caddy:
+    image: caddy:2
+    profiles: ["https"]
+    restart: unless-stopped
+    environment:
+      - DOMAIN=${DOMAIN:-}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - app
+
+volumes:
+  caddy_data:

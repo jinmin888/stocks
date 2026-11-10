@@ -67,6 +67,11 @@ app.add_middleware(SessionMiddleware, secret_key=settings.secret_key, same_site=
                    https_only=settings.https_only, max_age=30 * 24 * 3600)
 
 
+@app.get("/api/health", include_in_schema=False)
+def health():
+    return {"ok": True}
+
+
 # ---------------------------------------------------------------- 登录
 
 class LoginBody(BaseModel):
