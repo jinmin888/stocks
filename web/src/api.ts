@@ -55,7 +55,7 @@ export interface Meta {
 
 export interface ChartPoint { time: number; price: number; rsi?: number }
 export interface ChartData {
-  symbol: string; market: Market; timeframe: string;
+  symbol: string; market: Market; timeframe: string; stale?: boolean;
   bars: { time: number; open: number; high: number; low: number; close: number; volume: number }[];
   rsi: { time: number; value: number }[];
   fractals: (ChartPoint & { type: "top" | "bottom"; strength: string; confirm_time: number })[];

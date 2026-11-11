@@ -105,6 +105,7 @@ export default function Chart({ market, symbol, timeframe, runId, title, onClose
         {onClose && <button className="link" onClick={onClose} aria-label="close">✕</button>}
       </div>
       {error ? <div className="error">{error}</div> : !data ? <div className="muted">{t("loading")}</div> : null}
+      {data?.stale && <div className="small" style={{ color: "var(--warn)" }}>⚠ {t("staleData")}</div>}
       <div ref={box} className="chart-box" style={{ display: data ? "block" : "none" }} />
       <div className="muted small">{t("legendFractal")} · {t("legendDiv")}</div>
     </div>

@@ -326,6 +326,16 @@ def signals(date: str, _: str = Depends(require_user)):
 
 # ---------------------------------------------------------------- K 线图
 
+CHART_CACHE_SECONDS = 30 * 60  # 图表数据缓存最长 30 分钟内不重新请求
+
+
+def _chart_max_age(timeframe: str) -> float:
+    """缓存有效期：周期的一半，最长 30 分钟（15 分钟线为 7.5 分钟）。"""
+    from screener.data.timeframes import DURATION
+    dur = DURATION.get(timeframe)
+    return min(CHART_CACHE_SECONDS, dur.total_seconds() / 2) if dur is not None else CHART_CACHE_SECONDS
+
+
 def _ts(t: pd.Timestamp) -> int:
     t = t.tz_localize("UTC") if t.tzinfo is None else t.tz_convert("UTC")
     return int(t.timestamp())
@@ -342,10 +352,12 @@ def chart(market: str, symbol: str, timeframe: str = "1d", run_id: Optional[int]
             cfg = ScreenConfig.model_validate(snap.get("config") or {})
             exchange = snap.get("exchange", exchange)
     src = source_for(ScanRequest(market=market, exchange=exchange), settings.cache_dir)
+    store = Store(settings.cache_dir)
     try:
-        df = load_bars(Store(settings.cache_dir), src, symbol, timeframe)
+        # 刚扫描过的标的直接用缓存；取数失败时退回旧缓存，避免数据源限流时图表打不开
+        df = load_bars(store, src, symbol, timeframe, max_age=_chart_max_age(timeframe), allow_stale=True)
     except Exception as e:
-        raise HTTPException(502, f"取数据失败：{type(e).__name__} {e}")
+        raise HTTPException(502, f"取数据失败：{type(e).__name__} {str(e)[:200]}")
     if df.empty:
         raise HTTPException(404, "没有数据")
     # 在完整历史上计算（RSI 需要预热），只返回最后 N 根
@@ -357,7 +369,7 @@ def chart(market: str, symbol: str, timeframe: str = "1d", run_id: Optional[int]
         return {"time": times[f.extreme_pos], "price": f.price}
 
     return {
-        "symbol": symbol, "market": market, "timeframe": timeframe,
+        "symbol": symbol, "market": market, "timeframe": timeframe, "stale": store.stale,
         "bars": [{"time": times[i], "open": r.open, "high": r.high, "low": r.low,
                   "close": r.close, "volume": r.volume}
                  for i, r in enumerate(df.itertuples()) if i >= start],
