@@ -6,7 +6,7 @@ import io
 import json
 import logging
 from pathlib import Path
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 import pandas as pd
 import requests
@@ -23,8 +23,25 @@ def _load(path: Path) -> List[Instrument]:
     return [Instrument.model_validate(x) for x in json.loads(path.read_text())]
 
 
+SNAPSHOT_DIR = Path(__file__).parent / "snapshots"
+notices: List[str] = []  # 使用了旧列表 / 内置快照时的提示，由扫描流程取走并显示在结果页
+
+
+def _snapshot(key: str) -> Optional[tuple]:
+    """内置快照（随程序发布，scripts/update_snapshots.py 更新）：(列表, 日期)。"""
+    path = SNAPSHOT_DIR / f"{key}.json"
+    if not path.exists():
+        return None
+    data = json.loads(path.read_text(encoding="utf-8"))
+    market = key.split("_")[0]
+    items = [Instrument(symbol=x["symbol"], name=x.get("name", ""), market=market,
+                        is_st="ST" in x.get("name", "").upper()) for x in data["items"]]
+    return items, data.get("as_of", "")
+
+
 def cached(root: str | Path, key: str, build: Callable[[], List[Instrument]]) -> List[Instrument]:
-    """当天的列表直接用缓存；否则重新获取。获取失败时退回最近一次成功的列表（会记录警告）。"""
+    """当天的列表直接用缓存；否则重新获取。获取失败时依次退回：
+    最近一次成功的列表 → 内置快照。都没有才抛出异常。"""
     folder = Path(root) / "universe"
     path = folder / f"{key}_{pd.Timestamp.today():%Y%m%d}.json"
     if path.exists():
@@ -34,11 +51,21 @@ def cached(root: str | Path, key: str, build: Callable[[], List[Instrument]]) ->
         if not items:
             raise RuntimeError("列表为空")
     except Exception as e:
+        reason = f"{type(e).__name__}: {str(e)[:120]}"
         older = sorted(folder.glob(f"{key}_????????.json")) if folder.exists() else []
-        if not older:
-            raise
-        log.warning("%s 列表获取失败（%s: %s），使用 %s 的旧列表", key, type(e).__name__, str(e)[:120], older[-1].name)
-        return _load(older[-1])
+        if older:
+            day = older[-1].stem[-8:]
+            note = f"{key} 列表获取失败，使用 {day[:4]}-{day[4:6]}-{day[6:]} 获取的列表"
+            log.warning("%s（%s）", note, reason)
+            notices.append(note)
+            return _load(older[-1])
+        snap = _snapshot(key)
+        if snap:
+            note = f"{key} 列表获取失败，使用内置快照（{snap[1]}）"
+            log.warning("%s（%s）", note, reason)
+            notices.append(note)
+            return snap[0]
+        raise
     folder.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps([i.model_dump(mode="json") for i in items], ensure_ascii=False))
     for old in folder.glob(f"{key}_????????.json"):  # 只保留最新一份

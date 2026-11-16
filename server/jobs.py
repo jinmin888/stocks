@@ -63,6 +63,7 @@ def _execute(run_id: int) -> None:
         progress_by_market: Dict[str, tuple] = {}
         total = 0
         failed: list = []
+        notes: list = []
         for market, universe, symbols in markets:
             req = ScanRequest(market=market, timeframe=snap["timeframe"], universe=universe,
                               symbols=symbols, exchange=snap.get("exchange", "binance"))
@@ -79,13 +80,14 @@ def _execute(run_id: int) -> None:
                 out = run_scan(req, cfg, settings.cache_dir, settings.retry_wait, progress)
             progress_by_market[market] = (out.total, out.total)
             total += out.total
+            notes += out.notes
             failed += [f"{market}:{x}" if multi else x for x in out.failed]
             with db.session() as s:
                 for r in out.rows:
                     s.add(db.Result(run_id=run_id, market=market, **{k: _clean(v) for k, v in r.items()}))
                 s.commit()
         _update(run_id, status="done", finished_at=db.now(), total=total, done=total,
-                failed=failed, message="")
+                failed=failed, message="；".join(notes)[:500])
     except Exception as e:
         log.exception("run %s failed", run_id)
         _update(run_id, status="failed", finished_at=db.now(), error=f"{type(e).__name__}: {e}")

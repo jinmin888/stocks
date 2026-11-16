@@ -34,6 +34,7 @@ class ScanOutcome:
     total: int
     rows: List[dict]
     failed: List[str]
+    notes: List[str] = field(default_factory=list)  # 如：范围列表用了旧数据 / 内置快照
 
 
 def display_time(start: pd.Timestamp, market: str, timeframe: str, tz: str) -> str:
@@ -77,7 +78,12 @@ def run_scan(req: ScanRequest, cfg: ScreenConfig, cache_root: str = "data/cache"
     src = source_for(req, cache_root)
     if req.timeframe not in src.timeframes:
         raise ValueError(f"{req.market} 支持的周期：{src.timeframes}")
+    from .data import universes
+
+    universes.notices.clear()
     insts = resolve_universe(req, cfg, src)
+    notes = list(universes.notices)
+    universes.notices.clear()
     store, rows = Store(cache_root), []
     report = progress or (lambda *_: None)
 
@@ -108,4 +114,4 @@ def run_scan(req: ScanRequest, cfg: ScreenConfig, cache_root: str = "data/cache"
         time.sleep(retry_wait)
         failed = run(failed)
     rows.sort(key=lambda r: (r["side"], -(r["divergence_score"] or -1)))
-    return ScanOutcome(total=len(insts), rows=rows, failed=[i.symbol for i in failed])
+    return ScanOutcome(total=len(insts), rows=rows, failed=[i.symbol for i in failed], notes=notes)

@@ -91,7 +91,8 @@ docker compose up -d --build
 ## 6. 常见问题
 
 - **A 股扫描慢 / 东方财富限流**：A 股日线优先取东方财富；被限流（Push2RateLimitError）或超时时，10 分钟内自动改用腾讯行情（`proxy.finance.qq.com`），之后再试东方财富。两者都失败的标的会在 5 分钟后重试一次（`RETRY_WAIT`），结果页会列出仍未取到数据的标的。首次运行需要下载约 2 年历史，之后只增量更新。
-- **`Failed to resolve 'oss-ch.csindex.com.cn'`**：中证指数公司的文件服务器在部分网络 / DNS 下无法解析。沪深300、中证500、上证50 会自动改用新浪财经；中证1000 没有可靠的备用来源，会使用上一次成功获取的列表（列表每天更新一次）。如果从未成功获取过，可尝试给容器指定公共 DNS：在 `docker-compose.yml` 的 `app` 下加入 `dns: [223.5.5.5, 8.8.8.8]` 后重启。
+- **`oss-ch.csindex.com.cn` 连接失败**（`Failed to resolve` / `Network is unreachable` / 超时）：中证指数公司的文件服务器在部分网络下不可用，也不太稳定。成分股列表按以下顺序获取：官方文件 → 新浪财经（沪深300、中证500、上证50）→ 上一次成功获取的列表 → 程序内置的快照。用到旧列表或内置快照时，运行结果页会有黄色提示。内置快照在指数调整（每年 6 月、12 月）后用 `python scripts/update_snapshots.py` 更新。
+  如果报错信息里仍然直接出现 `oss-ch.csindex.com.cn` 的 ConnectionError，说明运行的还是旧版本：执行 `git pull` 和 `docker compose up -d --build`，然后在「设置」页右上角确认版本号。
 - **图表**：30 分钟内（短周期为周期的一半）取过的数据直接用缓存；数据源暂时不可用时显示本地缓存并给出提示。
 - **韩国股市提示需要 KRX 账号**：检查 `.env` 中的 `KRX_ID` / `KRX_PW`，并确认能用该账号登录 data.krx.co.kr。
 - **查看日志**：`docker compose logs -f app`

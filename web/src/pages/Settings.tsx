@@ -11,6 +11,11 @@ export default function Settings() {
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const [version, setVersion] = useState("");
+  useEffect(() => {
+    fetch("/api/health").then((r) => r.json()).then((j) => setVersion(j.version ?? "")).catch(() => {});
+  }, []);
+
   const load = () => api.kakaoStatus().then(setSt).catch((e) => setMsg({ ok: false, text: e.message }));
   useEffect(() => {
     load();
@@ -36,7 +41,11 @@ export default function Settings() {
 
   return (
     <div className="stack">
-      <h1>{t("settings")}</h1>
+      <div className="row">
+        <h1 style={{ margin: 0 }}>{t("settings")}</h1>
+        <span className="spacer" />
+        {version && <span className="muted small">{t("version")} {version}</span>}
+      </div>
       <div className="panel stack">
         <h2>{t("kakao")}</h2>
         {!st ? <div className="muted">{t("loading")}</div> : !st.configured ? (

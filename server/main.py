@@ -69,7 +69,8 @@ app.add_middleware(SessionMiddleware, secret_key=settings.secret_key, same_site=
 
 @app.get("/api/health", include_in_schema=False)
 def health():
-    return {"ok": True}
+    import screener
+    return {"ok": True, "version": screener.__version__}
 
 
 # ---------------------------------------------------------------- 登录

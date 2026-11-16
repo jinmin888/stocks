@@ -93,6 +93,9 @@ export default function RunView() {
         </div>
       )}
       {run.error && <div className="panel error">{run.error}</div>}
+      {run.status === "done" && run.message && (
+        <div className="panel small" style={{ color: "var(--warn)" }}>⚠ {run.message}</div>
+      )}
       {run.failed.length > 0 && (
         <div className="panel small">
           <strong>{t("failedSymbols")} ({run.failed.length}):</strong>{" "}

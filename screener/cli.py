@@ -42,6 +42,8 @@ def main(argv=None) -> int:
     except (RuntimeError, NotImplementedError, ValueError) as e:
         print(f"错误：{e}", file=sys.stderr)
         return 2
+    for note in res.notes:
+        print(f"注意：{note}", file=sys.stderr)
     if res.failed:
         print(f"注意：{len(res.failed)} 个标的未取到数据：{' '.join(res.failed)}", file=sys.stderr)
 

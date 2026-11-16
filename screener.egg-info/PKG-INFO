@@ -1,0 +1,25 @@
+Metadata-Version: 2.4
+Name: screener
+Version: 0.1.0
+Summary: Multi-market stock/crypto screener: fractals (顶底分型) and RSI divergence
+Requires-Python: >=3.10
+Requires-Dist: pandas>=2.0
+Requires-Dist: numpy>=1.24
+Requires-Dist: pydantic>=2.0
+Requires-Dist: pyyaml>=6
+Requires-Dist: pyarrow>=14
+Requires-Dist: ccxt>=4.4
+Requires-Dist: yfinance>=0.2.50
+Requires-Dist: akshare>=1.15
+Requires-Dist: pykrx>=1.0
+Requires-Dist: lxml>=5
+Requires-Dist: requests>=2.31
+Provides-Extra: server
+Requires-Dist: fastapi>=0.115; extra == "server"
+Requires-Dist: uvicorn[standard]>=0.30; extra == "server"
+Requires-Dist: sqlmodel>=0.0.22; extra == "server"
+Requires-Dist: apscheduler<4,>=3.10; extra == "server"
+Requires-Dist: itsdangerous>=2.1; extra == "server"
+Provides-Extra: dev
+Requires-Dist: pytest>=7; extra == "dev"
+Requires-Dist: httpx>=0.27; extra == "dev"

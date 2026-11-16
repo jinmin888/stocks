@@ -20,9 +20,23 @@ def test_cached_falls_back_to_last_good_list(tmp_path):
     assert [p.name for p in folder.iterdir()] == [f"cn_csi300_{pd.Timestamp.today():%Y%m%d}.json"]
 
 
+def _unreachable():
+    raise ConnectionError("[Errno 101] Network is unreachable")
+
+
+def test_cached_uses_bundled_snapshot_on_first_run(tmp_path):
+    u.notices.clear()
+    for key, n in (("cn_csi300", 300), ("cn_csi500", 500), ("cn_csi1000", 1000), ("cn_sse50", 50)):
+        items = u.cached(tmp_path, key, _unreachable)
+        assert len(items) == n and all(len(i.symbol) == 6 and i.market == "cn" for i in items)
+    assert len(u.notices) == 4 and "内置快照" in u.notices[0]
+    assert not (tmp_path / "universe").exists()  # 快照不写入缓存，下次仍会尝试在线获取
+    u.notices.clear()
+
+
 def test_cached_raises_without_any_list(tmp_path):
     with pytest.raises(ConnectionError):
-        u.cached(tmp_path, "cn_csi500", lambda: (_ for _ in ()).throw(ConnectionError("dns")))
+        u.cached(tmp_path, "us_sp500", _unreachable)  # 没有内置快照的列表
 
 
 def _dns_fail(symbol):
