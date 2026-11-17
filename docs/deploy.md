@@ -1,5 +1,28 @@
 # 部署说明
 
+## 0. Google Cloud 一键部署
+
+在 [Google Cloud Shell](https://shell.cloud.google.com)（浏览器里已登录的终端）中运行：
+
+```bash
+gcloud config set project <项目ID>
+curl -fsSLO https://raw.githubusercontent.com/jinmin888/stocks/master/scripts/deploy_gcp.sh
+bash deploy_gcp.sh
+```
+
+脚本会：启用 Compute Engine API → 保留固定 IP → 开放 8000/80/443 端口 → 在首尔（`asia-northeast3-a`）创建
+Ubuntu 24.04 的 `e2-small` VM（30GB 磁盘、2GB 交换分区）→ 安装 Docker 并克隆本仓库 → 提示输入网站密码、KRX
+账号、Kakao 키（只在 Cloud Shell 中输入，通过 SSH 传到 VM 的 `.env`，不经过实例元数据）→ 构建并启动。
+
+- 再次运行 `bash deploy_gcp.sh`：拉取最新代码并重建（`.env` 和 `data/` 保留）
+- `bash deploy_gcp.sh --env`：重新输入并替换 `.env`
+- `bash deploy_gcp.sh --delete`：删除 VM、固定 IP、防火墙规则（数据一并删除）
+- 可用环境变量调整：`ZONE`、`MACHINE`（如 `e2-medium`）、`DISK_GB`、`SOURCE_RANGES`（只允许自己的 IP 访问时设为 `x.x.x.x/32`）
+
+没有域名时网站走 HTTP，登录密码以明文传输；建议用 `SOURCE_RANGES` 限制来源 IP，或尽快按第 4 节配置域名和 HTTPS。
+
+以下是手动部署的步骤（其他云服务商或自己的服务器）。
+
 ## 1. 服务器
 
 - 建议地区：首尔 / 东京 / 新加坡（Binance 行情走 `data-api.binance.vision`，不受地区限制；KRX 和 KakaoTalk 在首尔延迟最低）
