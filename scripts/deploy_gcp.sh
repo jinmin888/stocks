@@ -29,6 +29,17 @@ if [ -z "$PROJECT" ] || [ "$PROJECT" = "(unset)" ]; then
   echo "프로젝트가 설정되지 않았습니다. 먼저 실행하세요:  gcloud config set project <프로젝트ID>" >&2
   exit 1
 fi
+ACCOUNT="$(gcloud config get-value account 2>/dev/null || true)"
+case "$ACCOUNT" in *gserviceaccount.com)
+  cat >&2 <<EOF
+지금은 서비스 계정($ACCOUNT)으로 로그인되어 있습니다. VM 안에서 실행한 것으로 보입니다.
+VM 의 서비스 계정은 새 VM 을 만들 권한이 없습니다. 둘 중 하나를 선택하세요:
+  1) 지금 이 VM 에 바로 설치:
+       curl -fsSLO https://raw.githubusercontent.com/jinmin888/stocks/master/scripts/install_vm.sh && bash install_vm.sh
+  2) 새 VM 을 만들려면 Google Cloud Shell(https://shell.cloud.google.com)에서 이 스크립트를 실행
+EOF
+  exit 1 ;;
+esac
 G=(gcloud --project "$PROJECT" --quiet)
 ssh_vm() { "${G[@]}" compute ssh "$NAME" --zone "$ZONE" --command "$1"; }
 vm_exists() { "${G[@]}" compute instances describe "$NAME" --zone "$ZONE" >/dev/null 2>&1; }
