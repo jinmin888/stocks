@@ -95,7 +95,8 @@ push_env() {
 
 start_app() {
   echo "== 이미지 빌드 및 실행 (처음에는 5~10분 걸립니다) =="
-  ssh_vm "cd $APP_DIR && sudo git fetch -q origin $BRANCH && sudo git checkout -q $BRANCH && sudo git reset -q --hard origin/$BRANCH && sudo docker compose up -d --build 2>&1 | tail -5"
+  # 저장소에 .env 가 들어 있어도 VM 의 실제 설정을 덮어쓰지 않도록, 코드 갱신 전후로 보관했다가 되돌립니다.
+  ssh_vm "cd $APP_DIR && sudo cp -p .env /root/.screener.env && sudo git fetch -q origin $BRANCH && sudo git checkout -q -f $BRANCH && sudo git reset -q --hard origin/$BRANCH && sudo cp -p /root/.screener.env .env && sudo docker compose up -d --build 2>&1 | tail -5"
 }
 
 wait_health() {
