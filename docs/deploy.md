@@ -21,6 +21,19 @@ Ubuntu 24.04 的 `e2-small` VM（30GB 磁盘、2GB 交换分区）→ 安装 Doc
 
 没有域名时网站走 HTTP，登录密码以明文传输；建议用 `SOURCE_RANGES` 限制来源 IP，或尽快按第 4 节配置域名和 HTTPS。
 
+### 已经有 VM（或其他 Ubuntu / Debian 服务器）
+
+SSH 登录到那台机器后直接安装，不需要 Cloud Shell：
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/jinmin888/stocks/master/scripts/install_vm.sh
+bash install_vm.sh
+```
+
+脚本会安装 Docker、克隆仓库到 `/opt/stocks`、提示输入设置（保存在仓库之外的 `/etc/screener.env`）、构建并启动。
+再次运行即更新；`bash install_vm.sh --env` 重新输入设置。Google Cloud VM 上还需要在 Cloud Shell 中开放 8000 端口，
+脚本结束时会打印要执行的两条命令。
+
 以下是手动部署的步骤（其他云服务商或自己的服务器）。
 
 ## 1. 服务器
