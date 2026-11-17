@@ -31,7 +31,7 @@ bash install_vm.sh
 ```
 
 脚本会安装 Docker、克隆仓库到 `/opt/stocks`、提示输入设置（保存在仓库之外的 `/etc/screener.env`）、构建并启动。
-再次运行即更新；`bash install_vm.sh --env` 重新输入设置。Google Cloud VM 上还需要在 Cloud Shell 中开放 8000 端口，
+再次运行即更新；`bash install_vm.sh --env` 重新输入设置；`bash install_vm.sh --repo-env` 使用仓库里提交的 `.env`，`--env-file 路径` 使用指定文件（`PUBLIC_URL` 为空或 localhost 时自动改成本机地址，`SECRET_KEY` 为空时自动生成）。Google Cloud VM 上还需要在 Cloud Shell 中开放 8000 端口，
 脚本结束时会打印要执行的两条命令。
 
 以下是手动部署的步骤（其他云服务商或自己的服务器）。
